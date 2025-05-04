@@ -1,17 +1,20 @@
 #!/bin/bash
 filename='./musicCatalog/*'
 clockLength='100'
-while getopts "hcvkf:t:" flag; do
+videoPlayer='mpv'
+while getopts "hcvkpf:t:" flag; do
   case $flag in
     h)
-        echo "flags:"
-        echo "{-h} Help"
-        echo "{-s} stops at end of the list"
-        echo "{-v} enables video playback, causes problems"
-        echo "{-k} stops the clear command from being used"
-        echo "{-f [directory]} specify where to play from defaults to ./musicCatalog/*"
-        echo "{-t [int]} takes a percent of time 1000 is 100% and 10 is 1%"
         echo "This program cycles through songs and notifies the user when it does"
+        echo " "
+        echo "flags:"
+        echo "  {-h} Help"
+        echo "  {-s} stops at end of the list"
+        echo "  {-v} enables video playback"
+        echo "  {-k} stops the clear command from being used"
+        echo "  {-p} uses device video player, most players need -v flag"
+        echo "  {-f [directory]} specify where to play from defaults to $filename"
+        echo "  {-t [int]} takes a percent of time 1000 is 100% and 10 is 1%"
         exit 1
         ;;
     c)
@@ -22,6 +25,10 @@ while getopts "hcvkf:t:" flag; do
         ;;
     k)
         # don't clear lines after each song
+        ;;
+    p)
+        videoPlayer='xdg-open'
+        # set to use default player instead of mpv
         ;;
     f)
         filename="$OPTARG/*"
@@ -49,12 +56,12 @@ while true; do
             #uses ffprobe to probe the time in decimal milliseconds
             time="$(ffprobe -v error -select_streams v:0 -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "$file")"
             clockTime=$(($(printf "%.0f" "$time") * $clockLength))
-            echo "Notification length: $clockTime"
+            echo "Notification length: $clockTime or $(($clockLength / 10))% total time"
             echo "$(basename "${file::-4}")" | while read OUTPUT; do notify-send -t "$clockTime" --hint=int:transient:1 'Now Playing' "$OUTPUT"; done
             if [[ $* == *-v* ]]; then
-                mpv "$file"
+                $videoPlayer "$file"
             else
-                mpv --no-video "$file"
+                $videoPlayer --no-video "$file"
             fi
         else
             echo "skipping folder: $file"
